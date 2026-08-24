@@ -30,58 +30,89 @@ winget install --id 7zip.7zip `
 # --------------------------------------------
 Write-Host "`n[3/5] Thorium Browser kuruluyor..." -ForegroundColor Yellow
 
-$thoriumApi = "https://api.github.com/repos/Alex313031/Thorium-Win/releases/latest"
+$thoriumApi = "https://api.github.com/repos/Alex313031/Thorium-Win/releases"
 $thoriumTemp = "$env:TEMP\ThoriumSetup.exe"
 
 try {
 
-    Write-Host "  - Thorium'un son sürümü aranıyor..." -ForegroundColor Cyan
+    Write-Host "  - Thorium release'leri kontrol ediliyor..." -ForegroundColor Cyan
 
-    $release = Invoke-RestMethod `
+    $headers = @{
+        "User-Agent" = "Windows-Setup-Script"
+    }
+
+    $releases = Invoke-RestMethod `
         -Uri $thoriumApi `
-        -Headers @{
-            "User-Agent" = "PowerShell"
-        } `
+        -Headers $headers `
         -ErrorAction Stop
 
-    # Windows installer EXE'sini bul
-    $asset = $release.assets |
+    # Beta olmayan en güncel release'i bul
+    $release = $releases |
         Where-Object {
-            $_.name -match "\.exe$" -and
-            $_.name -notmatch "portable|chromedriver|shell"
+            $_.prerelease -eq $false
         } |
         Select-Object -First 1
 
-    if ($asset) {
+    if (-not $release) {
 
-        Write-Host "  - Bulundu: $($asset.name)" -ForegroundColor Green
+        throw "Kararlı Thorium release'i bulunamadı."
+    }
 
-        Invoke-WebRequest `
-            -Uri $asset.browser_download_url `
-            -OutFile $thoriumTemp `
-            -UseBasicParsing `
-            -ErrorAction Stop
+    Write-Host "  - Sürüm bulundu: $($release.tag_name)" `
+        -ForegroundColor Green
 
-        Write-Host "  - Thorium kuruluyor..." -ForegroundColor Green
+    # EXE installer'ı bul
+    $asset = $release.assets |
+        Where-Object {
+            $_.name -match "\.exe$"
+        } |
+        Where-Object {
+            $_.name -notmatch "chromedriver|portable|debug"
+        } |
+        Select-Object -First 1
 
-        Start-Process `
-            -FilePath $thoriumTemp `
-            -ArgumentList "--silent" `
-            -Wait
+    if (-not $asset) {
 
-        Remove-Item `
-            $thoriumTemp `
-            -Force `
-            -ErrorAction SilentlyContinue
+        throw "Thorium Windows installer EXE bulunamadı."
+    }
 
-        Write-Host "  - Thorium kurulumu tamamlandı." -ForegroundColor Green
+    Write-Host "  - Installer: $($asset.name)" `
+        -ForegroundColor Green
 
+    Write-Host "  - Thorium indiriliyor..." `
+        -ForegroundColor Cyan
+
+    Invoke-WebRequest `
+        -Uri $asset.browser_download_url `
+        -OutFile $thoriumTemp `
+        -UseBasicParsing `
+        -ErrorAction Stop
+
+    Write-Host "  - Thorium kuruluyor..." `
+        -ForegroundColor Green
+
+    # Installer'ı sessiz çalıştırmayı dene
+    $thoriumProcess = Start-Process `
+        -FilePath $thoriumTemp `
+        -ArgumentList "/S" `
+        -Wait `
+        -PassThru
+
+    if ($thoriumProcess.ExitCode -eq 0) {
+
+        Write-Host "  - Thorium kurulumu tamamlandı." `
+            -ForegroundColor Green
     }
     else {
 
-        Write-Host "  - Thorium installer bulunamadı!" `
-            -ForegroundColor Red
+        Write-Host "  - Thorium installer ExitCode: $($thoriumProcess.ExitCode)" `
+            -ForegroundColor Yellow
     }
+
+    Remove-Item `
+        $thoriumTemp `
+        -Force `
+        -ErrorAction SilentlyContinue
 
 }
 catch {
@@ -185,7 +216,7 @@ Set-ItemProperty `
     -Name "1" `
     -Value "$tampermonkeyId;$updateUrl"
 
-Write-Host "  - Chrome: Tampermonkey zorunlu kurulum ayarlandı." `
+Write-Host "  ✓ Chrome -> Tampermonkey ayarlandı." `
     -ForegroundColor Green
 
 # ============================================
@@ -193,7 +224,7 @@ Write-Host "  - Chrome: Tampermonkey zorunlu kurulum ayarlandı." `
 # ============================================
 
 $thoriumRegPath = `
-    "HKLM:\SOFTWARE\Policies\Thorium\ExtensionInstallForcelist"
+    "HKLM:\SOFTWARE\Policies\Chromium\ExtensionInstallForcelist"
 
 if (-not (Test-Path $thoriumRegPath)) {
 
@@ -208,17 +239,18 @@ Set-ItemProperty `
     -Name "1" `
     -Value "$tampermonkeyId;$updateUrl"
 
-Write-Host "  - Thorium: Tampermonkey zorunlu kurulum ayarlandı." `
+Write-Host "  ✓ Thorium -> Tampermonkey ayarlandı." `
     -ForegroundColor Green
 
 # ============================================
 # KURULUM TAMAMLANDI
 # ============================================
 
-Write-Host "`n============================================" `
+Write-Host ""
+Write-Host "============================================" `
     -ForegroundColor Green
 
-Write-Host "       KURULUM TAMAMLANDI" `
+Write-Host "          KURULUM TAMAMLANDI" `
     -ForegroundColor Green
 
 Write-Host "============================================" `
@@ -229,7 +261,10 @@ Write-Host "Kurulanlar:" -ForegroundColor Cyan
 Write-Host "  ✓ Google Chrome"
 Write-Host "  ✓ 7-Zip"
 Write-Host "  ✓ Thorium"
-Write-Host "  ✓ GitHub programları"
+Write-Host "  ✓ AnyDesk"
+Write-Host "  ✓ AutoHotkey"
+Write-Host "  ✓ Ihsan"
+Write-Host "  ✓ PhotoScape"
 Write-Host "  ✓ Brave"
 Write-Host "  ✓ Tampermonkey -> Chrome"
 Write-Host "  ✓ Tampermonkey -> Thorium"
@@ -239,7 +274,7 @@ Write-Host ""
 # CHROME'U BAŞLAT
 # --------------------------------------------
 
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
 
 Start-Process `
     "chrome.exe" `
@@ -259,9 +294,14 @@ foreach ($path in $thoriumPaths) {
 
     if (Test-Path $path) {
 
-        Start-Process $path `
+        Start-Process `
+            -FilePath $path `
             -ErrorAction SilentlyContinue
 
         break
     }
 }
+
+Write-Host ""
+Write-Host "Chrome ve Thorium başlatıldı." `
+    -ForegroundColor Green
