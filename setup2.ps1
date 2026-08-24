@@ -1,54 +1,47 @@
 # ============================================
-#  YENİ PC - BRAVE + TAMPERMONKEY KURULUMU
-#  Admin (Yönetici) olarak çalıştırılmalı
+# SETUP2 - BRAVE + TAMPERMONKEY
+# Yönetici olarak çalıştırılmalı
 # ============================================
 
-Write-Host "===== BRAVE KURULUMU BAŞLIYOR =====" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "     BRAVE + TAMPERMONKEY KURULUMU" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
 
 # --------------------------------------------
 # 1) BRAVE KURULUMU
 # --------------------------------------------
 
-Write-Host "`n[1/2] Brave indiriliyor ve kuruluyor..." -ForegroundColor Yellow
-
-$repoRaw = "https://raw.githubusercontent.com/kendineselam/dosyalar/main"
-$dosya = "BraveBrowserSetup-BRV002.exe"
-$url = "$repoRaw/$dosya"
-$out = "$env:TEMP\$dosya"
+Write-Host "`n[1/2] Brave kuruluyor..." -ForegroundColor Yellow
 
 try {
 
-    Invoke-WebRequest `
-        -Uri $url `
-        -OutFile $out `
-        -ErrorAction Stop
+    winget install --id Brave.Brave `
+        --silent `
+        --accept-package-agreements `
+        --accept-source-agreements
 
-    Write-Host "Brave indirildi." -ForegroundColor Green
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Brave kurulumu başarılı." -ForegroundColor Green
+    }
+    else {
+        Write-Host "Brave kurulumu başarısız! Kod: $LASTEXITCODE" -ForegroundColor Red
+        exit 1
+    }
 
 }
 catch {
 
-    Write-Host "Brave indirilemedi!" -ForegroundColor Red
+    Write-Host "Brave kurulurken hata oluştu!" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
-    exit
+    exit 1
 }
-
-Write-Host "Brave kurulumu başlatılıyor..." -ForegroundColor Yellow
-
-Start-Process `
-    -FilePath $out `
-    -Wait
-
-Remove-Item $out -ErrorAction SilentlyContinue
-
-Write-Host "Brave kurulumu tamamlandı." -ForegroundColor Green
 
 
 # --------------------------------------------
 # 2) TAMPERMONKEY - BRAVE POLICY
 # --------------------------------------------
 
-Write-Host "`n[2/2] Brave için Tampermonkey ayarlanıyor..." -ForegroundColor Yellow
+Write-Host "`n[2/2] Tampermonkey Brave'e ekleniyor..." -ForegroundColor Yellow
 
 $tampermonkeyId = "dhdgffkkebhmkfjojejmpbldmpobfkfo"
 $updateUrl = "https://clients2.google.com/service/update2/crx"
@@ -56,11 +49,7 @@ $updateUrl = "https://clients2.google.com/service/update2/crx"
 $regPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave\ExtensionInstallForcelist"
 
 if (-not (Test-Path $regPath)) {
-
-    New-Item `
-        -Path $regPath `
-        -Force |
-        Out-Null
+    New-Item -Path $regPath -Force | Out-Null
 }
 
 Set-ItemProperty `
@@ -77,7 +66,7 @@ Write-Host "Tampermonkey policy ayarlandı." -ForegroundColor Green
 
 Write-Host "`nBrave başlatılıyor..." -ForegroundColor Cyan
 
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
 
 $bravePaths = @(
     "${env:ProgramFiles}\BraveSoftware\Brave-Browser\Application\brave.exe",
@@ -93,9 +82,13 @@ if ($bravePath) {
 
     Start-Process $bravePath
 
-    Write-Host "`n===== KURULUM TAMAMLANDI =====" -ForegroundColor Green
-    Write-Host "Brave açıldı."
-    Write-Host "Tampermonkey zorunlu olarak kurulacak." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "==========================================" -ForegroundColor Green
+    Write-Host "       KURULUM TAMAMLANDI" -ForegroundColor Green
+    Write-Host "==========================================" -ForegroundColor Green
+    Write-Host "Brave kuruldu."
+    Write-Host "Tampermonkey zorunlu kurulum policy'si aktif."
+    Write-Host ""
 
 }
 else {
