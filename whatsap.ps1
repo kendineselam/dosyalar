@@ -1,3 +1,5 @@
+$repoRaw = "https://raw.githubusercontent.com/kendineselam/dosyalar/main"
+
 # --------------------------------------------
 # 6) WHATSAPP EMBEDDED (WebView2 + AutoHotkey)
 # --------------------------------------------
