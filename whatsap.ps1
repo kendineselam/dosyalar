@@ -5,7 +5,7 @@ $repoRaw = "https://raw.githubusercontent.com/kendineselam/dosyalar/main"
 # --------------------------------------------
 Write-Host "`n[6/6] WhatsApp Embedded kuruluyor..." -ForegroundColor Yellow
 
-$wpZipUrl  = "$repoRaw/wp.zip"
+$wpZipUrl  = "$repoRaw/WP.zip"
 $wpZipTemp = "$env:TEMP\wp.zip"
 $wpDest    = "C:\WP"
 $ahkPath   = "$wpDest\WhatsAppEmbedded.ahk"
